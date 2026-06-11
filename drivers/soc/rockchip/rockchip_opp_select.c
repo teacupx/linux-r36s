@@ -830,8 +830,29 @@ int rockchip_adjust_power_scale(struct device *dev, int scale)
 	if (max_rate)
 		opp_scale = rockchip_pll_clk_rate_to_scale(clk, max_rate);
 	target_scale = max(irdrop_scale, scale);
-	if (target_scale <= 0)
-		goto out_clk;
+/*
+ * The max_cpufreq= overclock path overrides avs_scale so that
+ * the OPP table is kept open up to the requested frequency.
+ *
+ * That alone is not enough on RK3326/PX30: adaptive PLL scaling
+ * still uses target_scale, which may remain at the conservative
+ * bin/IR-drop value. In that case cpufreq/clk_summary can report
+ * the requested overclock rate, while the measured CPU speed remains
+ * capped at the old effective scale.
+ *
+ * Force target_scale to the same PLL table index selected by
+ * max_cpufreq=. Smaller scale index means higher PLL rate.
+ */
+
+if (!strncmp(dev_name(dev), "cpu0", 4) && opp_bin_sel) {
+	dev_info(dev,
+		 "[oga-avs] forcing target_scale: old=%u new=%d scale=%d irdrop_scale=%d\n",
+		 target_scale, opp_bin_sel, scale, irdrop_scale);
+	target_scale = opp_bin_sel;
+}
+
+if (target_scale <= 0)
+	goto out_clk;
 
 	dev_dbg(dev, "target_scale=%d, irdrop_scale=%d, scale=%d\n",
 		target_scale, irdrop_scale, scale);
