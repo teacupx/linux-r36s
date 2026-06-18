@@ -52,7 +52,7 @@ struct cluster_info {
 };
 static LIST_HEAD(cluster_info_list);
 
-static unsigned int boot_cpufreq;
+static unsigned int boot_cpufreq = 1296000;
 
 static int __init rockchip_boot_cpufreq_setup(char *__str)
 {
